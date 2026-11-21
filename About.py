@@ -1,8 +1,5 @@
 import streamlit as st
-from style import inject_css, masthead, note, footer
-
-st.set_page_config(page_title="About | Nifty Portfolio Lab", page_icon="🧭", layout="wide")
-inject_css()
+from style import masthead, note, footer
 
 masthead("About this project",
          "What the analysis does, how it works, and what it cannot tell you.")
