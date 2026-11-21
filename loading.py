@@ -17,6 +17,6 @@ FACTS = [
 def show_loading(slot, progress, message):
     # slot: an st.empty() placeholder; progress: 0.0 to 1.0
     with slot.container():
-        st.markdown(f"### ⏳ {message}")
+        st.markdown(f"**{message}**")
         st.progress(progress)
-        st.info(f"💡 **Did you know?** {random.choice(FACTS)}")
+        st.caption("Did you know? " + random.choice(FACTS))

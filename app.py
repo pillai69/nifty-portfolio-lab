@@ -11,21 +11,55 @@ from metrics import (summary_table, daily_returns, optimize, random_portfolios,
                      portfolio_stats, var_cvar, TRADING_DAYS, RISK_FREE)
 from backtest import walk_forward, perf_table
 from loading import show_loading, FACTS
-from style import inject_css
+from style import (inject_css, show, stat_strip, note, masthead, footer,
+                   COLORS, STRATEGY_COLORS)
 
-st.set_page_config(page_title="Nifty Portfolio Lab", page_icon="📈", layout="wide")
+st.set_page_config(page_title="Nifty Portfolio Lab", page_icon="🧭", layout="wide")
 inject_css()
 
 PRESETS = {
     "Balanced mix": ["Reliance", "TCS", "HDFC Bank", "Infosys", "ITC", "L&T"],
-    "Banks & finance": ["HDFC Bank", "ICICI Bank", "SBI", "Kotak Bank", "Axis Bank", "Bajaj Finance"],
-    "IT & tech": ["TCS", "Infosys", "Wipro", "HCL Tech"],
+    "Banks and finance": ["HDFC Bank", "ICICI Bank", "SBI", "Kotak Bank", "Axis Bank", "Bajaj Finance"],
+    "IT and technology": ["TCS", "Infosys", "Wipro", "HCL Tech"],
     "Defensive": ["HUL", "ITC", "Nestle", "Sun Pharma", "NTPC"],
-    "Cyclicals & energy": ["Reliance", "ONGC", "Coal India", "Tata Steel", "L&T", "NTPC"],
+    "Cyclicals and energy": ["Reliance", "ONGC", "Coal India", "Tata Steel", "L&T", "NTPC"],
     "All 24 stocks": list(NIFTY_STOCKS),
 }
+CRISES = {
+    "COVID-19 crash": ("2020-01-20", "2020-03-23"),
+    "2022 selloff": ("2022-01-01", "2022-06-17"),
+}
 
-# ---------- Cached heavy work (computed once, then remembered) ----------
+def mark_crashes(fig, index):
+    # Shade the crash periods that fall inside the chart's date range
+    for name, (s, e) in CRISES.items():
+        if pd.Timestamp(s) >= index.min() and pd.Timestamp(e) <= index.max():
+            fig.add_vrect(x0=s, x1=e, fillcolor=COLORS["rule"], opacity=0.6,
+                          line_width=0, layer="below")
+            fig.add_annotation(x=s, y=1.0, yref="paper", text=name, showarrow=False,
+                               xanchor="left", yanchor="top",
+                               font=dict(size=11, color=COLORS["muted"]))
+
+def takeaways(perf):
+    # Plain-English findings written from the backtest numbers
+    strat = perf.drop(index="Nifty 50 Index", errors="ignore")
+    out = []
+    best = strat["Sharpe"].idxmax()
+    out.append(f"{best} had the highest Sharpe ratio of the three strategies ({strat.loc[best, 'Sharpe']:.2f}).")
+    shallow = strat["Max Drawdown"].idxmax()
+    out.append(f"{shallow} had the shallowest maximum drawdown ({strat.loc[shallow, 'Max Drawdown']:.1%}).")
+    if "Max Sharpe" in strat.index and "Equal Weight" in strat.index:
+        diff = (strat.loc["Max Sharpe", "Return (CAGR)"] - strat.loc["Equal Weight", "Return (CAGR)"]) * 100
+        out.append(f"After transaction costs, Max Sharpe earned {abs(diff):.1f} percentage points a year "
+                   f"{'more' if diff > 0 else 'less'} than Equal Weight.")
+    if "Nifty 50 Index" in perf.index:
+        idx = perf.loc["Nifty 50 Index", "Sharpe"]
+        verdict = "beat" if strat.loc[best, "Sharpe"] > idx else "trailed"
+        out.append(f"The best strategy by Sharpe ({best}) {verdict} the Nifty 50 index "
+                   f"({strat.loc[best, 'Sharpe']:.2f} against {idx:.2f}).")
+    return out
+
+# ---------- Cached heavy work ----------
 @st.cache_data(show_spinner=False)
 def get_optimal(rets, max_w):
     return optimize(rets, "sharpe", max_w), optimize(rets, "minvar", max_w)
@@ -34,7 +68,7 @@ def get_optimal(rets, max_w):
 def get_frontier(rets):
     return random_portfolios(rets)
 
-@st.cache_data(show_spinner="Running walk-forward backtest... 💡 " + random.choice(FACTS))
+@st.cache_data(show_spinner="Running the walk-forward backtest. Did you know? " + random.choice(FACTS))
 def run_backtests(rets, max_w, lookback, rebalance, cost):
     return pd.DataFrame({
         "Max Sharpe": walk_forward(rets, "sharpe", max_w, lookback, rebalance, cost),
@@ -43,52 +77,53 @@ def run_backtests(rets, max_w, lookback, rebalance, cost):
     })
 
 # ---------- Sidebar ----------
-st.sidebar.title("📈 Nifty Portfolio Lab")
-preset = st.sidebar.selectbox("Quick preset", list(PRESETS))
+st.sidebar.markdown('<div class="brand">Nifty Portfolio Lab</div>'
+                    '<div class="brand-sub">Risk and portfolio analysis for Indian equities</div>',
+                    unsafe_allow_html=True)
+preset = st.sidebar.selectbox("Starting set", list(PRESETS))
 with st.sidebar.form("controls"):
-    names = st.multiselect("Stocks (min 2)", list(NIFTY_STOCKS), default=PRESETS[preset])
+    names = st.multiselect("Stocks (minimum 2)", list(NIFTY_STOCKS), default=PRESETS[preset])
     start = st.date_input("Start date", pd.Timestamp("2017-01-01"))
     end = st.date_input("End date", pd.Timestamp.today())
-    max_w = st.slider("Max weight per stock", 0.10, 1.00, 0.30, 0.05)
-    st.form_submit_button("🚀 Run analysis", use_container_width=True)
+    max_w = st.slider("Maximum weight per stock", 0.10, 1.00, 0.30, 0.05)
+    st.form_submit_button("Run analysis", use_container_width=True)
 
 if len(names) < 2:
-    st.warning("Pick at least 2 stocks in the sidebar, then press Run analysis.")
+    st.warning("Choose at least 2 stocks in the sidebar, then select Run analysis.")
     st.stop()
 if start >= end:
-    st.error("Start date must be before the end date.")
+    st.error("The start date must be before the end date.")
     st.stop()
 if len(names) * max_w < 1 - 1e-9:
-    st.warning("Max weight is too low for this many stocks. Raise the slider or add stocks.")
+    st.warning("The maximum weight is too low for this many stocks. Raise it or add more stocks.")
     st.stop()
 
-# ---------- First-run loading screen (only the very first time) ----------
+# ---------- Loading screen (first visit only) ----------
 first_run = "loaded" not in st.session_state
 loader = st.empty()
 def stage(progress, message):
     if first_run:
         show_loading(loader, progress, message)
 
-stage(0.10, "Downloading stock prices...")
+stage(0.10, "Downloading stock prices")
 prices = load_prices(tuple(NIFTY_STOCKS[n] for n in names), str(start), str(end))
 if prices.empty or prices.shape[1] < 2 or prices.shape[1] * max_w < 1 - 1e-9:
     loader.empty()
-    st.error("Couldn't get enough price data for this selection. Try other stocks or an earlier start date.")
+    st.error("Not enough price data for this selection. Try other stocks or an earlier start date.")
     st.stop()
 
-st.sidebar.caption(f"Latest data: {prices.index[-1].date()} (daily closes)")
+st.sidebar.caption(f"Latest data: {prices.index[-1]:%d %b %Y} (daily close)")
 rets = daily_returns(prices)
 
-stage(0.40, "Crunching risk numbers and optimizing portfolios...")
+stage(0.40, "Calculating risk and optimizing portfolios")
 table = summary_table(prices)
 w_sharpe, w_minvar = get_optimal(rets, max_w)
 w_equal = pd.Series(1 / len(rets.columns), index=rets.columns)
 mean_ret = (rets.mean() * TRADING_DAYS).values
 cov = (rets.cov() * TRADING_DAYS).values
 
-strategies = {"Max Sharpe": w_sharpe, "Min Variance": w_minvar, "Equal Weight": w_equal}
 rows = {}
-for label, w in strategies.items():
+for label, w in {"Max Sharpe": w_sharpe, "Min Variance": w_minvar, "Equal Weight": w_equal}.items():
     r, v = portfolio_stats(w.values, mean_ret, cov)
     var, cvar = var_cvar((rets * w).sum(axis=1))
     rows[label] = {"Expected Return": r, "Volatility": v, "Sharpe": (r - RISK_FREE) / v,
@@ -96,59 +131,65 @@ for label, w in strategies.items():
 summary = pd.DataFrame(rows).T
 
 # ---------- Page ----------
-st.title("Nifty Portfolio Lab")
-st.caption("Risk analysis and portfolio optimization on Nifty 50 stocks · Developed by Anant Aravind Pillai")
+masthead("Nifty Portfolio Lab",
+         "Risk analysis, portfolio optimization and out-of-sample testing on Nifty 50 stocks.")
 
 tab_ov, tab_risk, tab_opt, tab_bt, tab_stress = st.tabs(
-    ["📊 Overview", "⚠️ Risk", "🎯 Optimizer", "🔁 Backtest", "🌪️ Stress Test"])
+    ["Overview", "Risk", "Optimizer", "Backtest", "Stress test"])
 
 # ----- Overview -----
 with tab_ov:
     best = table["Sharpe"].idxmax()
     calmest = table["Volatility"].idxmin()
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Stocks analysed", len(prices.columns))
-    c2.metric("Trading days", f"{len(prices):,}")
-    c3.metric("Best Sharpe", best, f"{table.loc[best, 'Sharpe']:.2f}", delta_color="off")
-    c4.metric("Lowest volatility", calmest, f"{table.loc[calmest, 'Volatility']:.1%}", delta_color="off")
-
+    stat_strip([
+        ("Stocks analysed", f"{prices.shape[1]}", f"{len(prices):,} trading days"),
+        ("Period", f"{prices.index[0]:%b %Y} to {prices.index[-1]:%b %Y}", "Daily closing prices"),
+        ("Highest Sharpe ratio", best, f"{table.loc[best, 'Sharpe']:.2f}"),
+        ("Lowest volatility", calmest, f"{table.loc[calmest, 'Volatility']:.1%} a year"),
+    ])
     st.subheader("Growth of ₹100 invested")
     log_scale = st.toggle("Log scale", value=False)
     growth = prices / prices.iloc[0] * 100
-    fig = px.line(growth, log_y=log_scale,
-                  labels={"value": "Value of ₹100", "index": "Date", "variable": "Stock"})
-    fig.update_layout(hovermode="x unified")
-    st.plotly_chart(fig, use_container_width=True)
+    fig = px.line(growth, log_y=log_scale, labels={"value": "Value of ₹100", "index": "", "variable": ""})
+    fig.update_layout(hovermode="x unified" if prices.shape[1] <= 8 else "closest")
+    fig.update_yaxes(tickprefix="₹")
+    mark_crashes(fig, prices.index)
+    show(fig)
 
 # ----- Risk -----
 with tab_risk:
-    st.subheader("Risk and return summary")
+    st.subheader("Risk and return by stock")
     st.dataframe(table.style.format({
         "Return (CAGR)": "{:.1%}", "Volatility": "{:.1%}",
         "Sharpe": "{:.2f}", "Max Drawdown": "{:.1%}"}), use_container_width=True)
-    st.download_button("⬇ Download as CSV", table.to_csv().encode(),
-                       "risk_summary.csv", "text/csv")
+    st.download_button("Download as CSV", table.to_csv().encode(), "risk_summary.csv", "text/csv")
 
-    st.subheader("Risk vs return")
-    st.caption("Up and to the left is better: more return for less risk.")
-    scat = px.scatter(table.reset_index(names="Stock"), x="Volatility", y="Return (CAGR)",
-                      text="Stock", color="Sharpe", color_continuous_scale="Viridis")
-    scat.update_traces(textposition="top center", marker=dict(size=12))
-    scat.update_xaxes(tickformat=".0%")
-    scat.update_yaxes(tickformat=".0%")
-    st.plotly_chart(scat, use_container_width=True)
+    st.subheader("Risk against return")
+    st.caption("Stocks toward the upper left earned more return for less risk.")
+    sc = px.scatter(table.reset_index(names="Stock"), x="Volatility", y="Return (CAGR)",
+                    text="Stock", color="Sharpe",
+                    color_continuous_scale=["#B7C9C7", COLORS["accent"]])
+    sc.update_traces(textposition="top center", marker=dict(size=11))
+    sc.update_xaxes(tickformat=".0%")
+    sc.update_yaxes(tickformat=".0%")
+    sc.update_layout(coloraxis_colorbar=dict(thickness=12, title="Sharpe"))
+    show(sc)
 
-    st.subheader("Drawdown explorer")
-    pick = st.selectbox("Choose a stock", list(prices.columns))
+    st.subheader("Drawdown")
+    pick = st.selectbox("Stock", list(prices.columns))
     dd = prices[pick] / prices[pick].cummax() - 1
-    dd_fig = px.area(x=dd.index, y=dd.values, labels={"x": "Date", "y": "Drawdown"})
+    dd_fig = px.area(x=dd.index, y=dd.values, labels={"x": "", "y": "Fall from previous peak"})
+    dd_fig.update_traces(line_color=COLORS["neg"], fillcolor="rgba(179,64,46,0.16)")
     dd_fig.update_yaxes(tickformat=".0%")
-    st.plotly_chart(dd_fig, use_container_width=True)
+    show(dd_fig)
 
-    st.subheader("Correlation between stocks")
-    st.caption("Lower correlation = more diversification benefit.")
-    st.plotly_chart(px.imshow(rets.corr(), text_auto=".2f", color_continuous_scale="RdBu_r",
-                              zmin=-1, zmax=1), use_container_width=True)
+    st.subheader("Correlation")
+    st.caption("Darker cells mean two stocks move together more closely. Lower values give more diversification.")
+    corr = rets.corr()
+    hm = px.imshow(corr, text_auto=".2f", color_continuous_scale=["#FFFFFF", COLORS["accent"]],
+                   zmin=min(0.0, float(corr.min().min())), zmax=1)
+    hm.update_layout(coloraxis_colorbar=dict(thickness=12, title=""))
+    show(hm)
 
 # ----- Optimizer -----
 with tab_opt:
@@ -156,80 +197,86 @@ with tab_opt:
     st.dataframe(summary.style.format({
         "Expected Return": "{:.1%}", "Volatility": "{:.1%}", "Sharpe": "{:.2f}",
         "VaR 95% (1-day)": "{:.2%}", "CVaR 95% (1-day)": "{:.2%}"}), use_container_width=True)
-    st.caption("In-sample results (fitted on the same data). The Backtest tab tests them properly.")
+    st.caption("These results are in-sample: the optimizer was fitted on the same data. "
+               "The Backtest tab tests it on data it has not seen.")
 
     st.subheader("Efficient frontier")
     sim = get_frontier(rets)
-    ef = px.scatter(sim, x="Volatility", y="Return", color="Sharpe",
-                    color_continuous_scale="Viridis", opacity=0.6)
-    for label, color in [("Max Sharpe", "red"), ("Min Variance", "cyan"), ("Equal Weight", "white")]:
+    ef = px.scatter(sim, x="Volatility", y="Return", color="Sharpe", opacity=0.6,
+                    color_continuous_scale=["#D5DAD8", "#8C9895"])
+    ef.update_traces(marker=dict(size=5))
+    for label in ["Max Sharpe", "Min Variance", "Equal Weight"]:
         ef.add_trace(go.Scatter(
             x=[summary.loc[label, "Volatility"]], y=[summary.loc[label, "Expected Return"]],
             mode="markers", name=label,
-            marker=dict(size=15, symbol="star", color=color, line=dict(width=1, color="black"))))
+            marker=dict(size=14, symbol="diamond", color=STRATEGY_COLORS[label],
+                        line=dict(width=2, color="white"))))
     ef.update_xaxes(tickformat=".0%")
     ef.update_yaxes(tickformat=".0%")
-    st.plotly_chart(ef, use_container_width=True)
+    ef.update_layout(coloraxis_colorbar=dict(thickness=12, title="Sharpe"))
+    show(ef)
 
-    st.subheader("Optimal weights")
+    st.subheader("Portfolio weights")
     choice = st.radio("Portfolio", ["Max Sharpe", "Min Variance"], horizontal=True)
-    m1, m2, m3 = st.columns(3)
-    m1.metric("Expected return", f"{summary.loc[choice, 'Expected Return']:.1%}")
-    m2.metric("Volatility", f"{summary.loc[choice, 'Volatility']:.1%}")
-    m3.metric("Sharpe ratio", f"{summary.loc[choice, 'Sharpe']:.2f}")
-
+    stat_strip([
+        ("Expected return", f"{summary.loc[choice, 'Expected Return']:.1%}", "Per year"),
+        ("Volatility", f"{summary.loc[choice, 'Volatility']:.1%}", "Per year"),
+        ("Sharpe ratio", f"{summary.loc[choice, 'Sharpe']:.2f}", "Risk-free rate 7%"),
+    ])
     wsel = (w_sharpe if choice == "Max Sharpe" else w_minvar)
     wsel = wsel[wsel > 0.005].sort_values(ascending=False)
-    left, right = st.columns(2)
-    left.plotly_chart(px.bar(x=wsel.index, y=wsel.values, labels={"x": "Stock", "y": "Weight"}),
-                      use_container_width=True)
-    right.plotly_chart(px.pie(names=wsel.index, values=wsel.values, hole=0.5),
-                       use_container_width=True)
+    wb = px.bar(x=wsel.values[::-1], y=wsel.index[::-1], orientation="h",
+                text=[f"{v:.1%}" for v in wsel.values[::-1]],
+                labels={"x": "Weight", "y": ""})
+    wb.update_traces(marker_color=STRATEGY_COLORS[choice], textposition="outside")
+    wb.update_xaxes(tickformat=".0%")
+    show(wb)
 
 # ----- Backtest -----
 results = None
 with tab_bt:
-    st.subheader("Walk-forward backtest (out-of-sample)")
-    st.caption("At each rebalance the optimizer sees only past data, then holds the weights on unseen data.")
+    st.subheader("Walk-forward backtest")
+    st.caption("At each rebalance the optimizer sees only past data, then holds its weights on data it has not seen.")
     b1, b2, b3 = st.columns(3)
     lookback = b1.selectbox("Lookback (trading days)", [126, 252, 504], index=1)
     rebalance = b2.selectbox("Rebalance every (trading days)", [21, 63, 126], index=1)
-    cost_bps = b3.number_input("Transaction cost (bps)", 0, 50, 10)
+    cost_bps = b3.number_input("Transaction cost (basis points)", 0, 50, 10)
 
     if len(rets) <= lookback + rebalance:
-        st.warning("Not enough history for these settings. Use an earlier start date or a shorter lookback.")
+        st.warning("There is not enough history for these settings. Use an earlier start date or a shorter lookback.")
     else:
-        stage(0.70, "Running the walk-forward backtest (first run only)...")
+        stage(0.70, "Running the walk-forward backtest")
         results = run_backtests(rets, max_w, lookback, rebalance, cost_bps / 10000)
-
         bench = load_benchmark(str(start), str(end)).pct_change().dropna()
         bench.index = pd.to_datetime(bench.index).tz_localize(None)
         results["Nifty 50 Index"] = bench.reindex(results.index)
         results = results.dropna()
 
-        bt_fig = px.line((1 + results).cumprod() * 100,
-                         labels={"value": "Growth of ₹100", "index": "Date", "variable": "Strategy"})
-        bt_fig.update_layout(hovermode="x unified")
-        st.plotly_chart(bt_fig, use_container_width=True)
-
         perf = perf_table(results)
+        note("Key takeaways", takeaways(perf))
+
+        bt = px.line((1 + results).cumprod() * 100, color_discrete_map=STRATEGY_COLORS,
+                     labels={"value": "Value of ₹100", "index": "", "variable": ""})
+        bt.for_each_trace(lambda t: t.update(line=dict(dash="dot", width=2))
+                          if t.name == "Nifty 50 Index" else None)
+        bt.update_layout(hovermode="x unified")
+        bt.update_yaxes(tickprefix="₹")
+        mark_crashes(bt, results.index)
+        show(bt)
+
         st.dataframe(perf.style.format({
             "Return (CAGR)": "{:.1%}", "Volatility": "{:.1%}",
             "Sharpe": "{:.2f}", "Max Drawdown": "{:.1%}"}), use_container_width=True)
-        st.download_button("⬇ Download backtest results", perf.to_csv().encode(),
+        st.download_button("Download backtest results", perf.to_csv().encode(),
                            "backtest_results.csv", "text/csv")
 
 # ----- Stress test -----
 with tab_stress:
-    st.subheader("Stress tests")
-    st.caption("Total return of each strategy (out-of-sample) during real market crashes.")
+    st.subheader("Stress test")
+    st.caption("Total return of each strategy, tested out of sample, during two market crashes.")
     if results is None:
-        st.info("Run the backtest first (see the Backtest tab settings).")
+        st.info("Set up the backtest first. See the Backtest tab.")
     else:
-        CRISES = {
-            "COVID crash (20 Jan - 23 Mar 2020)": ("2020-01-20", "2020-03-23"),
-            "2022 selloff (1 Jan - 17 Jun 2022)": ("2022-01-01", "2022-06-17"),
-        }
         stress_rows = {}
         for label, (s, e) in CRISES.items():
             window = results.loc[s:e]
@@ -240,20 +287,18 @@ with tab_stress:
         stress = pd.DataFrame(stress_rows).T
 
         if stress.isna().all().all():
-            st.info("The backtest period doesn't cover these crashes. Use an earlier start date or a shorter lookback.")
+            st.info("The backtest period does not cover these crashes. Use an earlier start date or a shorter lookback.")
         else:
             st.dataframe(stress.style.format("{:.1%}", na_rep="n/a"), use_container_width=True)
-            st.plotly_chart(px.bar(stress, barmode="group",
-                                   labels={"value": "Total return", "index": ""}),
-                            use_container_width=True)
+            sb = px.bar(stress, barmode="group", color_discrete_map=STRATEGY_COLORS,
+                        labels={"value": "Total return", "index": "", "variable": ""})
+            sb.update_yaxes(tickformat=".0%")
+            show(sb)
 
-# ---------- Finish loading screen ----------
+# ---------- Finish ----------
 if first_run:
-    show_loading(loader, 1.0, "All done!")
-    time.sleep(0.6)
+    show_loading(loader, 1.0, "Done")
+    time.sleep(0.5)
 loader.empty()
 st.session_state["loaded"] = True
-
-st.divider()
-st.caption("Developed by Anant Aravind Pillai · Data: Yahoo Finance (daily closes) · "
-           "Educational project, not investment advice.")
+footer()
