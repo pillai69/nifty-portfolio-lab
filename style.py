@@ -12,6 +12,9 @@ STRATEGY_COLORS = {
     "Equal Weight": COLORS["amber"], "Nifty 50 Index": COLORS["gray"],
 }
 BODY_FONT = "IBM Plex Sans, system-ui, sans-serif"
+LINKEDIN = "https://www.linkedin.com/in/pillaianant/"
+GITHUB = "https://github.com/pillai69"
+REPO = "https://github.com/pillai69/nifty-portfolio-lab"
 
 # ---------- One chart style for the whole app ----------
 _axis = dict(showgrid=True, gridcolor=COLORS["rule"], zeroline=False,
@@ -54,7 +57,7 @@ CSS = """
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:wght@400;500;600&display=swap');
 :root {--paper:#F5F6F4; --surface:#FFFFFF; --ink:#1B2430; --muted:#5B6672; --rule:#DDE1E5;
        --accent:#1F5F5B; --pos:#1E7B4F; --neg:#B3402E;}
-html {scroll-behavior: smooth;}
+html {scroll-behavior: smooth; transition: filter 0.5s ease, background-color 0.5s ease;}
 
 /* Background: a faint chart grid with two soft colour washes */
 .stApp {
@@ -83,32 +86,41 @@ html, body, .stApp, p, li, label, button, input, textarea, th, td,
 [data-testid="stMarkdownContainer"] p {max-width: 72ch; line-height: 1.6;}
 
 /* Navbar */
-.st-key-navbar {position: sticky; top: 0; z-index: 100; padding: 12px 6px 10px 6px; margin-bottom: 20px;
-    background: rgba(245,246,244,0.86); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-    border-bottom: 1px solid var(--rule);}
-.st-key-navbar [data-testid="stHorizontalBlock"] {flex-wrap: nowrap !important; gap: 0.6rem;}
-.st-key-navbar [data-testid="stColumn"] {min-width: 0 !important;}
-.nav-brand {font-family: 'Newsreader', Georgia, serif; font-size: 1.4rem; font-weight: 500;
-    letter-spacing: -0.01em; white-space: nowrap; display: flex; align-items: center;}
-.mark {display: inline-flex; align-items: flex-end; gap: 2px; height: 20px; margin-right: 10px;}
-.mark i {display: block; width: 4px; background: var(--accent); border-radius: 1px;
-    transition: height 0.35s cubic-bezier(.2,.7,.2,1);}
-.mark i:nth-child(1) {height: 8px;} .mark i:nth-child(2) {height: 13px;} .mark i:nth-child(3) {height: 20px;}
-.nav-brand:hover .mark i:nth-child(1) {height: 17px;}
-.nav-brand:hover .mark i:nth-child(2) {height: 8px;}
-.nav-brand:hover .mark i:nth-child(3) {height: 13px;}
-.st-key-navbar [data-testid="stPageLink-NavLink"] {background: transparent !important; border-radius: 0;
-    padding: 6px 2px; border-bottom: 2px solid transparent; transition: border-color 0.25s ease;}
-.st-key-navbar [data-testid="stPageLink-NavLink"] p {color: var(--muted); font-weight: 500; transition: color 0.2s ease;}
-.st-key-navbar [data-testid="stPageLink-NavLink"]:hover {border-bottom-color: var(--rule);}
-.st-key-navbar [data-testid="stPageLink-NavLink"]:hover p {color: var(--ink);}
-.st-key-navbar [data-testid="stPageLink-NavLink"][aria-current="page"] {border-bottom-color: var(--accent);}
-.st-key-navbar [data-testid="stPageLink-NavLink"][aria-current="page"] p {color: var(--ink);}
-.nav-right {text-align: right; white-space: nowrap;}
-.nav-right a {color: var(--muted); text-decoration: none; font-size: 0.95rem; font-weight: 500; padding-bottom: 3px;
+.st-key-navbar {position: sticky; top: 10px; z-index: 100; margin: 10px 0 22px 0; padding: 10px 22px;
+    background: rgba(255,255,255,0.78); -webkit-backdrop-filter: blur(16px) saturate(150%);
+    backdrop-filter: blur(16px) saturate(150%); border: 1px solid var(--rule); border-radius: 12px;
+    box-shadow: 0 8px 28px rgba(27,36,48,0.07); animation: drop 0.6s cubic-bezier(.2,.7,.2,1) both;}
+.st-key-navbar [data-testid="stHorizontalBlock"] {flex-wrap: nowrap !important; align-items: center; gap: 1.8rem;}
+.st-key-navbar [data-testid="stColumn"] {flex: 0 0 auto !important; width: auto !important; min-width: 0 !important;}
+.st-key-navbar [data-testid="stColumn"]:nth-child(4) {flex: 1 1 auto !important;}
+.nav-brand {font-family: 'Newsreader', Georgia, serif; font-size: 1.45rem; font-weight: 500;
+    letter-spacing: -0.01em; white-space: nowrap; transition: color 0.25s ease; height: 24px; line-height: 24px;}
+.nav-brand:hover {color: var(--accent);}
+.st-key-navbar a[data-testid="stPageLink-NavLink"] {
+    background: linear-gradient(var(--accent), var(--accent)) left bottom / 0 2px no-repeat !important;
+    border-radius: 0; padding: 0; min-height: 24px; transition: background-size 0.35s cubic-bezier(.2,.7,.2,1);}
+.st-key-navbar a[data-testid="stPageLink-NavLink"] p {color: var(--muted); font-weight: 500;
+    transition: color 0.25s ease;}
+.st-key-navbar a[data-testid="stPageLink-NavLink"]:hover {background-size: 100% 2px !important;}
+.st-key-navbar a[data-testid="stPageLink-NavLink"]:hover p {color: var(--ink);}
+.nav-right {text-align: right; white-space: nowrap; height: 24px; line-height: 24px;}
+.nav-right a {color: var(--muted); text-decoration: none; font-size: 0.95rem; font-weight: 500; display: inline-block; height: 24px; line-height: 24px;
     background: linear-gradient(var(--accent), var(--accent)) left bottom / 0 2px no-repeat;
-    transition: background-size 0.3s ease, color 0.2s ease;}
+    transition: background-size 0.35s cubic-bezier(.2,.7,.2,1), color 0.25s ease;}
 .nav-right a:hover {color: var(--ink); background-size: 100% 2px;}
+.nav-right a + a {margin-left: 22px;}
+.st-key-navbar label p {font-size: 0.9rem; color: var(--muted); white-space: nowrap;}
+.st-key-navbar p {margin: 0 !important; line-height: 1.3;}
+.st-key-navbar [data-testid="stMarkdownContainer"] {margin-bottom: 0 !important;}
+@media (max-width: 760px) {
+    .st-key-navbar {padding: 8px 14px;}
+    .st-key-navbar [data-testid="stHorizontalBlock"] {gap: 0.9rem;}
+    .st-key-navbar [data-testid="stColumn"]:nth-child(4),
+    .st-key-navbar [data-testid="stColumn"]:nth-child(5) {display: none !important;}
+    .st-key-navbar [data-testid="stColumn"]:nth-child(3) {margin-right: auto;}
+    .st-key-navbar label p {display: none;}
+    .nav-brand {font-size: 1.05rem;}
+}
 
 /* Masthead, key figures, notes */
 .masthead {border-bottom: 1px solid var(--rule); padding-bottom: 14px; margin-bottom: 20px;}
@@ -152,6 +164,10 @@ html, body, .stApp, p, li, label, button, input, textarea, th, td,
 @keyframes tape {from {transform: translateX(0);} to {transform: translateX(-50%);}}
 
 /* Tabs, panels, controls */
+[data-baseweb="select"] > div, [data-baseweb="input"], [data-baseweb="base-input"] {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;}
+[data-baseweb="select"] > div:focus-within, [data-baseweb="input"]:focus-within {
+    border-color: var(--accent) !important; box-shadow: 0 0 0 3px rgba(31,95,91,0.18);}
 .stTabs [data-baseweb="tab-list"] {gap: 28px; border-bottom: 1px solid var(--rule);}
 .stTabs [data-baseweb="tab"] {height: auto; padding: 10px 2px; background: transparent; transition: color 0.2s ease;}
 .stTabs [data-baseweb="tab-highlight"] {background-color: var(--accent); height: 2px;}
@@ -181,6 +197,7 @@ td {border-bottom: 1px solid var(--rule); padding: 8px 10px; vertical-align: top
 /* One entrance sequence on load, then everything stays still */
 @keyframes rise {from {opacity: 0; transform: translateY(10px);} to {opacity: 1; transform: none;}}
 @keyframes fade {from {opacity: 0;} to {opacity: 1;}}
+@keyframes drop {from {opacity: 0; transform: translateY(-8px);} to {opacity: 1; transform: none;}}
 .masthead {animation: rise 0.6s cubic-bezier(.2,.7,.2,1) both;}
 .tape {animation: rise 0.6s cubic-bezier(.2,.7,.2,1) 0.08s both;}
 .stat-strip {animation: rise 0.6s cubic-bezier(.2,.7,.2,1) 0.16s both;}
@@ -190,21 +207,37 @@ td {border-bottom: 1px solid var(--rule); padding: 8px 10px; vertical-align: top
 }
 """
 
-def inject_css():
-    st.markdown("<style>" + CSS + "</style>", unsafe_allow_html=True)
+DARK_CSS = "html {background-color: #F5F6F4; filter: invert(1) hue-rotate(180deg);}"
+LIGHT_CSS = "html {filter: none;}"
 
-def navbar(pages):
+def init_theme():
+    # Remember the choice for the session; a ?theme=dark link also starts in dark mode
+    if "dark" not in st.session_state:
+        st.session_state["dark"] = st.query_params.get("theme", "") == "dark"
+
+def inject_css():
+    extra = DARK_CSS if st.session_state.get("dark", False) else LIGHT_CSS
+    st.markdown("<style>" + CSS + extra + "</style>", unsafe_allow_html=True)
+
+def navbar(pages, current):
+    # Mark the current page's link as active (Streamlit does not expose this itself)
+    active = [p.title for p in pages].index(current.title) + 2
+    st.markdown(
+        f'<style>.st-key-navbar [data-testid="stColumn"]:nth-child({active}) a[data-testid="stPageLink-NavLink"] '
+        f'{{background-size: 100% 2px !important;}}'
+        f'.st-key-navbar [data-testid="stColumn"]:nth-child({active}) a[data-testid="stPageLink-NavLink"] p '
+        f'{{color: var(--ink);}}</style>', unsafe_allow_html=True)
     with st.container(key="navbar"):
-        cols = st.columns([2.8, 1.1, 0.9, 4], vertical_alignment="center")
-        cols[0].markdown(
-            '<div class="nav-brand"><span class="mark"><i></i><i></i><i></i></span>Nifty Portfolio Lab</div>',
-            unsafe_allow_html=True)
+        cols = st.columns(6, vertical_alignment="center")
+        cols[0].markdown('<div class="nav-brand">Nifty Portfolio Lab</div>', unsafe_allow_html=True)
         for col, page in zip(cols[1:3], pages):
             col.page_link(page, label=page.title)
-        cols[3].markdown(
-            '<div class="nav-right"><a href="https://github.com/pillai69/nifty-portfolio-lab" '
-            'target="_blank" rel="noopener">Source code</a></div>',
+        cols[4].markdown(
+            f'<div class="nav-right"><a href="{LINKEDIN}" target="_blank" rel="noopener">LinkedIn</a>'
+            f'<a href="{GITHUB}" target="_blank" rel="noopener">GitHub</a></div>',
             unsafe_allow_html=True)
+        cols[5].toggle("Dark mode", key="dark")
+    st.query_params["theme"] = "dark" if st.session_state.get("dark") else "light"
 
 def masthead(title, subtitle):
     st.markdown(f'<div class="masthead"><h1>{title}</h1><p>{subtitle}</p></div>', unsafe_allow_html=True)

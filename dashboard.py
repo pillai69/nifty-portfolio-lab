@@ -139,8 +139,9 @@ with tab_ov:
     best = table["Sharpe"].idxmax()
     calmest = table["Volatility"].idxmin()
     stat_strip([
-        ("Stocks analysed", f"{prices.shape[1]}", f"{len(prices):,} trading days"),
-        ("Period", f"{prices.index[0]:%b %Y} to {prices.index[-1]:%b %Y}", "Daily closing prices"),
+        ("Stocks analysed", f"{prices.shape[1]}", "Nifty 50 constituents"),
+        ("Period", f"{prices.index[0]:%Y} to {prices.index[-1]:%Y}",
+         f"{prices.index[0]:%b %Y} to {prices.index[-1]:%b %Y}, {len(prices):,} trading days"),
         ("Highest Sharpe ratio", best, f"{table.loc[best, 'Sharpe']:.2f}"),
         ("Lowest volatility", calmest, f"{table.loc[calmest, 'Volatility']:.1%} a year"),
     ])

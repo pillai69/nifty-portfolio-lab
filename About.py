@@ -1,5 +1,5 @@
 import streamlit as st
-from style import masthead, note, footer
+from style import masthead, note, footer, LINKEDIN, GITHUB, REPO
 
 masthead("About this project",
          "What the analysis does, how it works, and what it cannot tell you.")
@@ -58,14 +58,8 @@ with main:
         st.write("Without a cap, optimizers tend to put almost everything into one or two stocks, "
                  "which is unrealistic and risky.")
 
-with side:
-    st.subheader("Author")
-    st.markdown("**Anant Aravind Pillai**")
-    st.write("B.Sc. Economics with Data Science, CHRIST (Deemed to be University), Bengaluru")
-    st.markdown("[GitHub](https://github.com/pillai69)")
-    st.markdown("[LinkedIn](https://www.linkedin.com/in/YOUR-LINKEDIN)")
-    st.markdown("[Source code](https://github.com/pillai69/nifty-portfolio-lab)")
-    st.subheader("Built with")
-    st.write("Python, pandas, NumPy, SciPy, Plotly, Streamlit, yfinance")
+    st.markdown(f"[GitHub]({GITHUB})")
+    st.markdown(f"[LinkedIn]({LINKEDIN})")
+    st.markdown(f"[Source code]({REPO})")
 
 footer()
