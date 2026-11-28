@@ -8,7 +8,8 @@ inject_css()
 
 pages = [
     st.Page("dashboard.py", title="Dashboard", default=True),
-    st.Page("About.py", title="About", url_path="about"),
+    st.Page("assistant.py", title="Assistant", url_path="assistant"),
+    st.Page("about.py", title="About", url_path="about"),
 ]
 nav = st.navigation(pages, position="hidden")
 navbar(pages, nav)
